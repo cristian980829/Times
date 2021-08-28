@@ -1,6 +1,8 @@
 # Times-Task
 
-This is an educational project with azure functions
+This is an educational project 
+
+Azure functions
 
 REST Api
 

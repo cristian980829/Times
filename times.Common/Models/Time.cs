@@ -6,7 +6,7 @@ namespace times.Common.Models
 {
     public class Time
     {
-        public DateTime Date { get; set;  }
+        public DateTime date { get; set;  }
 
         public int employeId { get; set; }
 

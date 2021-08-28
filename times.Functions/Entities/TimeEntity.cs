@@ -7,7 +7,7 @@ namespace times.Functions.Entities
 {
     public class TimeEntity : TableEntity
     {
-        public DateTime Date { get; set; }
+        public DateTime date { get; set; }
 
         public int employeId { get; set; }
 

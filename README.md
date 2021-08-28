@@ -1,4 +1,4 @@
-# Times-Task
+# Times
 
 This is an educational project 
 

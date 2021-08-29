@@ -11,8 +11,10 @@ namespace times.Functions.Entities
 
         public int employeId { get; set; }
 
-        public int type { get; set; }
+        public int? type { get; set; }
 
-        public bool isConsolidated { get; set; }
+        public bool? isConsolidated { get; set; }
+
+        public int? minutesWorked { get; set; }
     }
 }

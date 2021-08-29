@@ -11,6 +11,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using times.Common.Models;
 using times.Common.Responses;
 using times.Functions.Entities;
+using System.Reflection;
 
 namespace times.Functions.Functions
 {
@@ -23,14 +24,11 @@ namespace times.Functions.Functions
             ILogger log)
         {
             log.LogInformation("Recieved a new time.");
-
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
 
-            if (string.IsNullOrEmpty(time?.employeId.ToString()) ||
-                string.IsNullOrEmpty(time?.date.ToString()) ||
-                string.IsNullOrEmpty(time?.type.ToString()))
+            if (time.date.Year==1)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -38,7 +36,7 @@ namespace times.Functions.Functions
                     Message = "The request must have all the data."
                 });
             }
-
+            
             TimeEntity timeEntity = new TimeEntity
             {
                 employeId = time.employeId,

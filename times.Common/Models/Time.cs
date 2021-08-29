@@ -13,5 +13,7 @@ namespace times.Common.Models
         public int type { get; set; }
 
         public bool isConsolidated { get; set; }
+
+        public float minutesWorked { get; set; }
     }
 }

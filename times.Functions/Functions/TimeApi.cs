@@ -1,17 +1,18 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using times.Common.Models;
 using times.Common.Responses;
 using times.Functions.Entities;
-using System.Reflection;
 
 namespace times.Functions.Functions
 {
@@ -28,7 +29,7 @@ namespace times.Functions.Functions
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
 
-            if (time.date.Year==1)
+            if (time.Date.Year == 1)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -36,13 +37,39 @@ namespace times.Functions.Functions
                     Message = "The request must have all the data."
                 });
             }
-            
+
+            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, time.EmployeId);
+            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
+            TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null);
+
+            if (existsId.Results.Count != 0)
+            {
+                //add times to a list to sort them
+                List<TimeEntity> timesList = new List<TimeEntity>();
+                foreach (TimeEntity item in existsId)
+                {
+                    //Console.WriteLine(item.Date);
+                    timesList.Add(item);
+                }
+                timesList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
+
+                if (timesList.Last().Type==time.Type)
+                {
+                    string type = time.Type is 0 ? "entered" : "left";
+                    return new BadRequestObjectResult(new Response
+                    {
+                        IsSuccess = false,
+                        Message = $"this person has already {type}."
+                    });
+                }
+            }
+
             TimeEntity timeEntity = new TimeEntity
             {
-                employeId = time.employeId,
-                date = time.date,
-                type = time.type,
-                isConsolidated = false,
+                EmployeId = time.EmployeId,
+                Date = time.Date,
+                Type = time.Type,
+                IsConsolidated = false,
                 ETag = "*",
                 PartitionKey = "TIME",
                 RowKey = Guid.NewGuid().ToString(),
@@ -59,6 +86,11 @@ namespace times.Functions.Functions
                 Message = message,
                 Result = timeEntity
             });
+        }
+
+        private static void List<T>()
+        {
+            throw new NotImplementedException();
         }
 
         [FunctionName(nameof(UpdateTime))]
@@ -89,7 +121,7 @@ namespace times.Functions.Functions
 
             //Update time
             TimeEntity timeEntity = (TimeEntity)findResult.Result;
-            timeEntity.date = time.date;
+            timeEntity.Date = time.Date;
 
             TableOperation addOperation = TableOperation.Replace(timeEntity);
             await timeTable.ExecuteAsync(addOperation);

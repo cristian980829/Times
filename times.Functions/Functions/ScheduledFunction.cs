@@ -22,7 +22,7 @@ namespace times.Functions.Functions
         {
             log.LogInformation($"Consolidated completed function executed at: {DateTime.Now}");
 
-            string filter = TableQuery.GenerateFilterConditionForBool("isConsolidated", QueryComparisons.Equal, false);
+            string filter = TableQuery.GenerateFilterConditionForBool("IsConsolidated", QueryComparisons.Equal, false);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
             TableQuerySegment<TimeEntity> completedTimes = await timeTable.ExecuteQuerySegmentedAsync(query, null);
 
@@ -30,22 +30,22 @@ namespace times.Functions.Functions
             List<ConsolidatedTimes> times = new List<ConsolidatedTimes>();
             List<TimeEntity> employee_times = null;
 
-            foreach (IGrouping<int, TimeEntity> grouping in completedTimes.GroupBy(t => t.employeId).Where(t => t.Count() != 1))
+            foreach (IGrouping<int, TimeEntity> grouping in completedTimes.GroupBy(t => t.EmployeId).Where(t => t.Count() != 1))
             {
                 int dato = int.Parse(string.Format("{0}", grouping.Key, grouping.Count()));
                 ConsolidatedTimes time = new ConsolidatedTimes();
                 employee_times = new List<TimeEntity>();
-                time.id = dato;
+                time.Id = dato;
                 foreach (TimeEntity item in completedTimes)
                 {
-                    if (dato == item.employeId)
+                    if (dato == item.EmployeId)
                     {
                         employee_times.Add(item);
                     }
                 }
                 //Order by date
-                employee_times.Sort((x, y) => DateTime.Compare(x.date, y.date));
-                time.employeeTimes = employee_times;
+                employee_times.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
+                time.EmployeeTimes = employee_times;
                 times.Add(time);
             }
 
@@ -54,38 +54,38 @@ namespace times.Functions.Functions
                 int hours = 0, min = 0, totalMinutes = 0, cont = 0;
                 DateTime employeDate = new DateTime();
                 string entryRowKey = "";
-                foreach (TimeEntity em in item.employeeTimes)
+                foreach (TimeEntity em in item.EmployeeTimes)
                 {
                     cont += 1;
                     if ((cont % 2) != 0)
                     {
-                        hours += em.date.Hour;
-                        min += em.date.Minute;
+                        hours += em.Date.Hour;
+                        min += em.Date.Minute;
                         entryRowKey = em.RowKey;
                     }
                     else
                     {
-                        hours = em.date.Hour - hours;
+                        hours = em.Date.Hour - hours;
                         if (min > 0)
                         {
-                            totalMinutes += ((hours * 60) + em.date.Minute) - min;
+                            totalMinutes += ((hours * 60) + em.Date.Minute) - min;
                         }
                         else
                         {
-                            totalMinutes += (hours * 60) + em.date.Minute;
+                            totalMinutes += (hours * 60) + em.Date.Minute;
                         }
 
                         updateIsConsolidatedState(entryRowKey, timeTable);
                         updateIsConsolidatedState(em.RowKey, timeTable);
 
-                        employeDate = em.date;
+                        employeDate = em.Date;
                         hours = 0;
                         min = 0;
                         entryRowKey = "";
                     }
                 }
 
-                string consolidated_filter = TableQuery.GenerateFilterConditionForInt("employeId", QueryComparisons.Equal, item.id);
+                string consolidated_filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, item.Id);
                 TableQuery<TimeEntity> consolidated_query = new TableQuery<TimeEntity>().Where(consolidated_filter);
                 TableQuerySegment<TimeEntity> existsConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidated_query, null);
 
@@ -93,21 +93,21 @@ namespace times.Functions.Functions
                 {
                     foreach (TimeEntity it in existsConsolidated)
                     {
-                        if ((it.date.Year == employeDate.Year) &&
-                            (it.date.Month == employeDate.Month) &&
-                            (it.date.Day == employeDate.Day))
+                        if ((it.Date.Year == employeDate.Year) &&
+                            (it.Date.Month == employeDate.Month) &&
+                            (it.Date.Day == employeDate.Day))
                         {
                             updateIfExistsConsolidated(it.RowKey, consolidatedTable, totalMinutes);
                         }
                         else
                         {
-                            createConsolidation(item.id, totalMinutes, consolidatedTable);
+                            createConsolidation(item.Id, totalMinutes, consolidatedTable);
                         }
                     }
                 }
                 else
                 {
-                    createConsolidation(item.id, totalMinutes, consolidatedTable);
+                    createConsolidation(item.Id, totalMinutes, consolidatedTable);
                 }
 
                 totalMinutes = 0;
@@ -124,7 +124,7 @@ namespace times.Functions.Functions
 
             //Update
             TimeEntity time_Entity = (TimeEntity)findResult.Result;
-            time_Entity.isConsolidated = true;
+            time_Entity.IsConsolidated = true;
 
             TableOperation add_Operation = TableOperation.Replace(time_Entity);
             await timeTable.ExecuteAsync(add_Operation);
@@ -138,7 +138,7 @@ namespace times.Functions.Functions
 
             //Update
             TimeEntity time_Entity = (TimeEntity)findResult.Result;
-            time_Entity.minutesWorked = time_Entity.minutesWorked + minutesWorked;
+            time_Entity.MinutesWorked = time_Entity.MinutesWorked + minutesWorked;
 
             TableOperation add_Operation = TableOperation.Replace(time_Entity);
             await consolidatedTable.ExecuteAsync(add_Operation);
@@ -148,9 +148,9 @@ namespace times.Functions.Functions
         {
             TimeEntity timeEntity = new TimeEntity
             {
-                employeId = id,
-                date = DateTime.UtcNow,
-                minutesWorked = totalMinutes,
+                EmployeId = id,
+                Date = DateTime.UtcNow,
+                MinutesWorked = totalMinutes,
                 ETag = "*",
                 PartitionKey = "CONSOLIDATED",
                 RowKey = Guid.NewGuid().ToString(),

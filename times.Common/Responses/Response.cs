@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace times.Common.Responses
+﻿namespace times.Common.Responses
 {
     public class Response
     {

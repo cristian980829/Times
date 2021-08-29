@@ -5,7 +5,7 @@ namespace times.Common.Models
 {
     internal class ConsolidatedTimes
     {
-        public int id { get; set; }
-        public List<TimeEntity> employeeTimes { get; set; }
+        public int Id { get; set; }
+        public List<TimeEntity> EmployeeTimes { get; set; }
     }
 }

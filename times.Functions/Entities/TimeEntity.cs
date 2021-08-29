@@ -1,20 +1,18 @@
 ﻿using Microsoft.WindowsAzure.Storage.Table;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace times.Functions.Entities
 {
     public class TimeEntity : TableEntity
     {
-        public DateTime date { get; set; }
+        public DateTime Date { get; set; }
 
-        public int employeId { get; set; }
+        public int EmployeId { get; set; }
 
-        public int? type { get; set; }
+        public int? Type { get; set; }
 
-        public bool? isConsolidated { get; set; }
+        public bool? IsConsolidated { get; set; }
 
-        public int? minutesWorked { get; set; }
+        public int? MinutesWorked { get; set; }
     }
 }

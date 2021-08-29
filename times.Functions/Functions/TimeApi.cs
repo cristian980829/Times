@@ -53,7 +53,7 @@ namespace times.Functions.Functions
                 }
                 timesList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
 
-                if (timesList.Last().Type==time.Type)
+                if (timesList.Last().Type == time.Type)
                 {
                     string type = time.Type is 0 ? "entered" : "left";
                     return new BadRequestObjectResult(new Response

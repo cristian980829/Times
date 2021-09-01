@@ -14,7 +14,6 @@ namespace times.Functions.Functions
 {
     public static class ConsolidatedApi
     {
-
         [FunctionName(nameof(getAllConsolidatedByDate))]
         public static async Task<IActionResult> getAllConsolidatedByDate(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "consolidated/{date}")] HttpRequest req,
@@ -28,9 +27,7 @@ namespace times.Functions.Functions
             List<TimeEntity> consolidatedList = new List<TimeEntity>();
             foreach (TimeEntity item in consolidated)
             {
-                if (item.Date.Year == date.Year &&
-                    item.Date.Month == date.Month &&
-                    item.Date.Day == date.Day)
+                if (item.Date.ToString("dd-MM-yyyy").Equals(date.Date.ToString("dd-MM-yyyy")))
                 {
                     consolidatedList.Add(item);
                 }

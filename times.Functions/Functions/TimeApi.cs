@@ -29,7 +29,9 @@ namespace times.Functions.Functions
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
 
-            if (time.Date.Year == 1)
+            if (time?.EmployeId == null ||
+                time?.Date == null ||
+                time?.Type == null)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -38,7 +40,7 @@ namespace times.Functions.Functions
                 });
             }
 
-            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, time.EmployeId);
+            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, (int)time.EmployeId);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
             TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null);
 
@@ -48,7 +50,6 @@ namespace times.Functions.Functions
                 List<TimeEntity> timesList = new List<TimeEntity>();
                 foreach (TimeEntity item in existsId)
                 {
-                    //Console.WriteLine(item.Date);
                     timesList.Add(item);
                 }
                 timesList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
@@ -63,11 +64,22 @@ namespace times.Functions.Functions
                     });
                 }
             }
+            else
+            {
+                if (time.Type == 1)
+                {
+                    return new BadRequestObjectResult(new Response
+                    {
+                        IsSuccess = false,
+                        Message = $"this person has not entered."
+                    });
+                }
+            }
 
             TimeEntity timeEntity = new TimeEntity
             {
-                EmployeId = time.EmployeId,
-                Date = time.Date,
+                EmployeId = (int)time.EmployeId,
+                Date = (DateTime)time.Date,
                 Type = time.Type,
                 IsConsolidated = false,
                 ETag = "*",
@@ -121,7 +133,7 @@ namespace times.Functions.Functions
 
             //Update time
             TimeEntity timeEntity = (TimeEntity)findResult.Result;
-            timeEntity.Date = time.Date;
+            timeEntity.Date = (DateTime)time.Date;
 
             TableOperation addOperation = TableOperation.Replace(timeEntity);
             await timeTable.ExecuteAsync(addOperation);

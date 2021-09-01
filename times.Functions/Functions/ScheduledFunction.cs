@@ -14,7 +14,7 @@ namespace times.Functions.Functions
     {
         [FunctionName("ScheduledFunction")]
         public static async Task Run(
-            //Created consolidation if 'isConsolidated' = true, every N minutes
+            //Create consolidation if 'isConsolidated' = true, every N minutes.
             [TimerTrigger("0 */1 * * * *")] TimerInfo myTimer,
             [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
             [Table("consolidated", Connection = "AzureWebJobsStorage")] CloudTable consolidatedTable,
@@ -51,36 +51,26 @@ namespace times.Functions.Functions
 
             foreach (ConsolidatedTimes item in times)
             {
-                int hours = 0, min = 0, totalMinutes = 0, cont = 0;
                 DateTime employeDate = new DateTime();
+                TimeSpan difference;
                 string entryRowKey = "";
+                double totalMinutes = 0;
                 foreach (TimeEntity em in item.EmployeeTimes)
                 {
-                    cont += 1;
-                    if ((cont % 2) != 0)
+                    if (em.Type == 0)
                     {
-                        hours += em.Date.Hour;
-                        min += em.Date.Minute;
+                        employeDate = em.Date;
                         entryRowKey = em.RowKey;
                     }
                     else
                     {
-                        hours = em.Date.Hour - hours;
-                        if (min > 0)
-                        {
-                            totalMinutes += ((hours * 60) + em.Date.Minute) - min;
-                        }
-                        else
-                        {
-                            totalMinutes += (hours * 60) + em.Date.Minute;
-                        }
+                        difference = em.Date - employeDate;
+                        totalMinutes += difference.TotalMinutes;
 
                         updateIsConsolidatedState(entryRowKey, timeTable);
                         updateIsConsolidatedState(em.RowKey, timeTable);
 
                         employeDate = em.Date;
-                        hours = 0;
-                        min = 0;
                         entryRowKey = "";
                     }
                 }
@@ -93,9 +83,8 @@ namespace times.Functions.Functions
                 {
                     foreach (TimeEntity it in existsConsolidated)
                     {
-                        if ((it.Date.Year == employeDate.Year) &&
-                            (it.Date.Month == employeDate.Month) &&
-                            (it.Date.Day == employeDate.Day))
+                        //TimeSpan difference = it.Date. - initial
+                        if (it.Date.Date.ToString("dd-MM-yyyy").Equals(employeDate.Date.ToString("dd-MM-yyyy")))
                         {
                             updateIfExistsConsolidated(it.RowKey, consolidatedTable, totalMinutes);
                         }
@@ -109,9 +98,7 @@ namespace times.Functions.Functions
                 {
                     createConsolidation(item.Id, totalMinutes, consolidatedTable);
                 }
-
                 totalMinutes = 0;
-                cont = 0;
             }
 
         }
@@ -130,7 +117,7 @@ namespace times.Functions.Functions
             await timeTable.ExecuteAsync(add_Operation);
         }
 
-        private static async void updateIfExistsConsolidated(string rowkey, CloudTable consolidatedTable, int minutesWorked)
+        private static async void updateIfExistsConsolidated(string rowkey, CloudTable consolidatedTable, double minutesWorked)
         {
             //Update consolidation status to true
             TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("CONSOLIDATED", rowkey);
@@ -144,7 +131,7 @@ namespace times.Functions.Functions
             await consolidatedTable.ExecuteAsync(add_Operation);
         }
 
-        private static async void createConsolidation(int id, int totalMinutes, CloudTable consolidatedTable)
+        private static async void createConsolidation(int id, double totalMinutes, CloudTable consolidatedTable)
         {
             TimeEntity timeEntity = new TimeEntity
             {

@@ -21,10 +21,8 @@ namespace times.Functions.Functions
         [FunctionName(nameof(CreateTime))]
         public static async Task<IActionResult> CreateTime(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "time")] HttpRequest req,
-            [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
-            ILogger log)
+            [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable)
         {
-            log.LogInformation("Recieved a new time.");
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
@@ -43,37 +41,34 @@ namespace times.Functions.Functions
             string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, (int)time.EmployeId);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
             TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null);
+            
+            string replyMessage = null;
 
             if (existsId.Results.Count != 0)
             {
-                //add times to a list to sort them
-                List<TimeEntity> timesList = new List<TimeEntity>();
-                foreach (TimeEntity item in existsId)
-                {
-                    timesList.Add(item);
-                }
-                timesList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
+                List<TimeEntity> timesList = existsId.OrderBy(x => x.Date).ToList();
 
                 if (timesList.Last().Type == time.Type)
                 {
-                    string type = time.Type is 0 ? "entered" : "left";
-                    return new BadRequestObjectResult(new Response
-                    {
-                        IsSuccess = false,
-                        Message = $"this person has already {type}."
-                    });
+                    replyMessage = "This employee has alreay ";
+                    replyMessage += time.Type is 0 ? "entered" : "left";
                 }
             }
             else
             {
                 if (time.Type == 1)
                 {
-                    return new BadRequestObjectResult(new Response
-                    {
-                        IsSuccess = false,
-                        Message = $"this person has not entered."
-                    });
+                    replyMessage = $"this employee has not entered.";
                 }
+            }
+
+            if (replyMessage != null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = replyMessage
+                });
             }
 
             TimeEntity timeEntity = new TimeEntity
@@ -91,7 +86,6 @@ namespace times.Functions.Functions
             await timeTable.ExecuteAsync(addOperation);
 
             string message = "New time stored in table";
-            log.LogInformation(message);
             return new OkObjectResult(new Response
             {
                 IsSuccess = true,
@@ -117,6 +111,17 @@ namespace times.Functions.Functions
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
+
+            if (time?.EmployeId == null ||
+                time?.Date == null ||
+                time?.Type == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "The request must have all the data."
+                });
+            }
 
             // Validate time id
             TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("TIME", id);
@@ -149,8 +154,8 @@ namespace times.Functions.Functions
             });
         }
 
-        [FunctionName(nameof(getAllTimes))]
-        public static async Task<IActionResult> getAllTimes(
+        [FunctionName(nameof(GetAllTimes))]
+        public static async Task<IActionResult> GetAllTimes(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "time")] HttpRequest req,
             [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
             ILogger log)
@@ -160,7 +165,16 @@ namespace times.Functions.Functions
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>();
             TableQuerySegment<TimeEntity> times = await timeTable.ExecuteQuerySegmentedAsync(query, null);
 
-            string message = "Rtrieved all times.";
+            if (times.Results.Count == 0)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "Without times."
+                });
+            }
+
+            string message = "Retrieved all times.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
@@ -171,8 +185,8 @@ namespace times.Functions.Functions
             });
         }
 
-        [FunctionName(nameof(getTimeById))]
-        public static IActionResult getTimeById(
+        [FunctionName(nameof(GetTimeById))]
+        public static IActionResult GetTimeById(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "time/{id}")] HttpRequest req,
             [Table("time", "TIME", "{id}", Connection = "AzureWebJobsStorage")] TimeEntity timeEntity,
             string id,
@@ -200,8 +214,8 @@ namespace times.Functions.Functions
             });
         }
 
-        [FunctionName(nameof(deleteTime))]
-        public static async Task<IActionResult> deleteTime(
+        [FunctionName(nameof(DeleteTime))]
+        public static async Task<IActionResult> DeleteTime(
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "time/{id}")] HttpRequest req,
             [Table("time", "TIME", "{id}", Connection = "AzureWebJobsStorage")] TimeEntity timeEntity,
             [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,

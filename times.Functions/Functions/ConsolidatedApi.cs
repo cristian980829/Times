@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using times.Common.Responses;
 using times.Functions.Entities;
@@ -24,13 +25,26 @@ namespace times.Functions.Functions
             log.LogInformation($"Get consolidated by date: {date} received.");
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>();
             TableQuerySegment<TimeEntity> consolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(query, null);
-            List<TimeEntity> consolidatedList = new List<TimeEntity>();
-            foreach (TimeEntity item in consolidated)
+
+            List<TimeEntity> consolidatedList = null;
+
+            if (consolidated.Results.Count == 0)
             {
-                if (item.Date.ToString("dd-MM-yyyy").Equals(date.Date.ToString("dd-MM-yyyy")))
+                return new BadRequestObjectResult(new Response
                 {
-                    consolidatedList.Add(item);
-                }
+                    IsSuccess = false,
+                    Message = "Without consolidated."
+                });
+            }
+
+            consolidatedList = consolidated.Where(t => t.Date.ToString("dd-MM-yyyy").Equals(date.Date.ToString("dd-MM-yyyy"))).ToList();
+            if (consolidatedList.Count == 0)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "There are no consolidations on this date."
+                });
             }
 
             string message = $"Consolidated: {date}, received.";

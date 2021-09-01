@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using times.Common.Models;
 using times.Functions.Entities;
 
 namespace times.Functions.Functions
@@ -24,86 +23,54 @@ namespace times.Functions.Functions
 
             string filter = TableQuery.GenerateFilterConditionForBool("IsConsolidated", QueryComparisons.Equal, false);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
-            TableQuerySegment<TimeEntity> completedTimes = await timeTable.ExecuteQuerySegmentedAsync(query, null);
+            TableQuerySegment<TimeEntity> unconsolidatedTimes = await timeTable.ExecuteQuerySegmentedAsync(query, null);
 
+            List<TimeEntity> employee_times = unconsolidatedTimes.OrderBy(t => t.EmployeId).ThenBy(e => e.Date).ToList();
 
-            List<ConsolidatedTimes> times = new List<ConsolidatedTimes>();
-            List<TimeEntity> employee_times = null;
-
-            foreach (IGrouping<int, TimeEntity> grouping in completedTimes.GroupBy(t => t.EmployeId).Where(t => t.Count() != 1))
+            DateTime employeDate = new DateTime();
+            TimeSpan difference;
+            string entryRowKey = "";
+            double totalMinutes = 0;
+            int id = -1;
+            string RowKeyLastEmployee = employee_times.Last().RowKey;
+            foreach (TimeEntity em in employee_times)
             {
-                int dato = int.Parse(string.Format("{0}", grouping.Key, grouping.Count()));
-                ConsolidatedTimes time = new ConsolidatedTimes();
-                employee_times = new List<TimeEntity>();
-                time.Id = dato;
-                foreach (TimeEntity item in completedTimes)
+                if (id == -1)
                 {
-                    if (dato == item.EmployeId)
-                    {
-                        employee_times.Add(item);
-                    }
-                }
-                //Order by date
-                employee_times.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
-                time.EmployeeTimes = employee_times;
-                times.Add(time);
-            }
-
-            foreach (ConsolidatedTimes item in times)
-            {
-                DateTime employeDate = new DateTime();
-                TimeSpan difference;
-                string entryRowKey = "";
-                double totalMinutes = 0;
-                foreach (TimeEntity em in item.EmployeeTimes)
-                {
-                    if (em.Type == 0)
-                    {
-                        employeDate = em.Date;
-                        entryRowKey = em.RowKey;
-                    }
-                    else
-                    {
-                        difference = em.Date - employeDate;
-                        totalMinutes += difference.TotalMinutes;
-
-                        updateIsConsolidatedState(entryRowKey, timeTable);
-                        updateIsConsolidatedState(em.RowKey, timeTable);
-
-                        employeDate = em.Date;
-                        entryRowKey = "";
-                    }
+                    id = em.EmployeId;
                 }
 
-                string consolidated_filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, item.Id);
-                TableQuery<TimeEntity> consolidated_query = new TableQuery<TimeEntity>().Where(consolidated_filter);
-                TableQuerySegment<TimeEntity> existsConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidated_query, null);
-
-                if (existsConsolidated.Results.Count != 0)
+                if (id != em.EmployeId && id != -1)
                 {
-                    foreach (TimeEntity it in existsConsolidated)
-                    {
-                        //TimeSpan difference = it.Date. - initial
-                        if (it.Date.Date.ToString("dd-MM-yyyy").Equals(employeDate.Date.ToString("dd-MM-yyyy")))
-                        {
-                            updateIfExistsConsolidated(it.RowKey, consolidatedTable, totalMinutes);
-                        }
-                        else
-                        {
-                            createConsolidation(item.Id, totalMinutes, consolidatedTable);
-                        }
-                    }
+                    CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                    id = em.EmployeId;
+                    totalMinutes = 0;
+                }
+
+                if (em.Type == 0)
+                {
+                    employeDate = em.Date;
+                    entryRowKey = em.RowKey;
                 }
                 else
                 {
-                    createConsolidation(item.Id, totalMinutes, consolidatedTable);
-                }
-                totalMinutes = 0;
-            }
+                    difference = em.Date - employeDate;
+                    totalMinutes += difference.TotalMinutes;
 
+                    UpdateIsConsolidatedState(entryRowKey, timeTable);
+                    UpdateIsConsolidatedState(em.RowKey, timeTable);
+
+                    employeDate = em.Date;
+                    entryRowKey = "";
+                    if (RowKeyLastEmployee == em.RowKey)
+                    {
+                        CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                    }
+                }
+            }
         }
 
-        private static async void updateIsConsolidatedState(string rowkey, CloudTable timeTable)
+        private static async void UpdateIsConsolidatedState(string rowkey, CloudTable timeTable)
         {
             //Update consolidation status to true
             TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("TIME", rowkey);
@@ -117,7 +84,7 @@ namespace times.Functions.Functions
             await timeTable.ExecuteAsync(add_Operation);
         }
 
-        private static async void updateIfExistsConsolidated(string rowkey, CloudTable consolidatedTable, double minutesWorked)
+        private static async void UpdateIfExistsConsolidated(string rowkey, CloudTable consolidatedTable, double minutesWorked)
         {
             //Update consolidation status to true
             TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("CONSOLIDATED", rowkey);
@@ -125,13 +92,13 @@ namespace times.Functions.Functions
 
             //Update
             TimeEntity time_Entity = (TimeEntity)findResult.Result;
-            time_Entity.MinutesWorked = time_Entity.MinutesWorked + minutesWorked;
+            time_Entity.MinutesWorked += minutesWorked;
 
             TableOperation add_Operation = TableOperation.Replace(time_Entity);
             await consolidatedTable.ExecuteAsync(add_Operation);
         }
 
-        private static async void createConsolidation(int id, double totalMinutes, CloudTable consolidatedTable)
+        private static async void CreateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable)
         {
             TimeEntity timeEntity = new TimeEntity
             {
@@ -146,6 +113,34 @@ namespace times.Functions.Functions
             TableOperation addOperation = TableOperation.Insert(timeEntity);
             await consolidatedTable.ExecuteAsync(addOperation);
         }
+
+        private static async void CreateOrUpdateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable, DateTime employeDate)
+        {
+            string consolidated_filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, id);
+            TableQuery<TimeEntity> consolidated_query = new TableQuery<TimeEntity>().Where(consolidated_filter);
+            TableQuerySegment<TimeEntity> existsConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidated_query, null);
+
+            if (existsConsolidated.Results.Count != 0)
+            {
+                foreach (TimeEntity it in existsConsolidated)
+                {
+                    if (it.Date.ToString("dd-MM-yyyy").Equals(employeDate.Date.ToString("dd-MM-yyyy")))
+                    {
+                        UpdateIfExistsConsolidated(it.RowKey, consolidatedTable, totalMinutes);
+                    }
+                    else
+                    {
+                        CreateConsolidation(id, totalMinutes, consolidatedTable);
+                    }
+                }
+            }
+            else
+            {
+                CreateConsolidation(id, totalMinutes, consolidatedTable);
+            }
+        }
+
+
 
     }
 }

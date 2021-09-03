@@ -36,7 +36,7 @@ namespace times.Functions.Functions
                     Message = "Without consolidated."
                 });
             }
-
+            //Obtains the consolidated ones that coincide with the date entered
             consolidatedList = consolidated.Where(t => t.Date.ToString("dd-MM-yyyy").Equals(date.Date.ToString("dd-MM-yyyy"))).ToList();
             if (consolidatedList.Count == 0)
             {

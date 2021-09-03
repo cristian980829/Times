@@ -20,13 +20,14 @@ namespace times.Functions.Functions
             ILogger log)
         {
             log.LogInformation($"Consolidated completed function executed at: {DateTime.Now}");
-
+            //Obtain all times where IsConsolidated=false 
             string filter = TableQuery.GenerateFilterConditionForBool("IsConsolidated", QueryComparisons.Equal, false);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
             TableQuerySegment<TimeEntity> unconsolidatedTimes = await timeTable.ExecuteQuerySegmentedAsync(query, null);
-
+            //Check for data
             if (unconsolidatedTimes.Results.Count != 0)
             {
+                //If there is data, it orders them by id and date
                 List<TimeEntity> employee_times = unconsolidatedTimes.OrderBy(t => t.EmployeId).ThenBy(e => e.Date).ToList();
 
                 DateTime employeDate = new DateTime();
@@ -35,15 +36,19 @@ namespace times.Functions.Functions
                 double totalMinutes = 0;
                 int id = -1;
                 string RowKeyLastEmployee = employee_times.Last().RowKey;
+
                 foreach (TimeEntity em in employee_times)
                 {
                     if (id == -1)
                     {
                         id = em.EmployeId;
                     }
-
+                    //If it finishes going through all the data of an employee the consolidation is saved.
                     if (id != em.EmployeId && id != -1)
                     {
+                        //If the employee already has a consolidation, a new consolidation will be created
+                        //if the current date is different from the date of the already registered consolidation.
+                        //else the consolidation will be updated in your field minutes worked
                         CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
                         id = em.EmployeId;
                         totalMinutes = 0;
@@ -54,11 +59,12 @@ namespace times.Functions.Functions
                         employeDate = em.Date;
                         entryRowKey = em.RowKey;
                     }
+                    //Consolidation will only be created if the employee has checked out
                     else
                     {
                         difference = em.Date - employeDate;
                         totalMinutes += difference.TotalMinutes;
-
+                        //The IsConsolidated field is updated at the employee's entry and exit
                         UpdateIsConsolidatedState(entryRowKey, timeTable);
                         UpdateIsConsolidatedState(em.RowKey, timeTable);
 

@@ -5,11 +5,10 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using times.Functions.Entities;
 
 namespace times.Tests.Helpers
 {
-    public sealed  class MockCloudTableTime : CloudTable
+    public sealed class MockCloudTableTime : CloudTable
     {
         public MockCloudTableTime(Uri tableAddress) : base(tableAddress)
         {

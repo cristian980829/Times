@@ -39,7 +39,7 @@ namespace times.Functions.Functions
             }
 
             string replyMessage = null;
-
+            //Validate that the employee does not make two consecutive entries or two consecutive exits
             Task<string> validate_Entry = validateEntry(timeTable, (int)time.EmployeId, time);
 
             if (validate_Entry.Result != null)
@@ -103,7 +103,6 @@ namespace times.Functions.Functions
                 });
             }
 
-            // Validate time id
             TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("TIME", id);
             TableResult findResult = await timeTable.ExecuteAsync(findOperation);
 
@@ -220,7 +219,7 @@ namespace times.Functions.Functions
             string deletedMessage = null;
             if (size > 0)
             {
-                deletedMessage = validateIfItCanBeDelete(existsId, size, time, timeTable).Result;
+                deletedMessage = validateIfYouNeedToDeleteAnotherTime(existsId, size, time, timeTable).Result;
             }
 
             await timeTable.ExecuteAsync(TableOperation.Delete(time));
@@ -270,7 +269,7 @@ namespace times.Functions.Functions
             return null;
         }
 
-        private static async Task<string> validateIfItCanBeDelete(TableQuerySegment<TimeEntity> existsId, int size, TimeEntity time, CloudTable timeTable)
+        private static async Task<string> validateIfYouNeedToDeleteAnotherTime(TableQuerySegment<TimeEntity> existsId, int size, TimeEntity time, CloudTable timeTable)
         {
             string deleted = null;
             List<TimeEntity> timesList = existsId.OrderBy(x => x.Date).ToList();
@@ -278,8 +277,10 @@ namespace times.Functions.Functions
             {
                 if (timesList[i].RowKey == time.RowKey)
                 {
+                    //if the current time has the type at 1 and has a registered entry it will remove both
                     if (timesList[i].Type == 1)
                     {
+                        //But if it is the last record, only the current one will be removed.
                         if (timesList.Last().RowKey != timesList[i].RowKey)
                         {
                             await timeTable.ExecuteAsync(TableOperation.Delete(timesList[i - 1]));
@@ -288,6 +289,8 @@ namespace times.Functions.Functions
                     }
                     else
                     {
+                        //if the current time has the type at 0 and has a registered exit it will remove both
+                        //But if it is the last record, only the current one will be removed.
                         if (timesList.Last().RowKey != timesList[i].RowKey)
                         {
                             await timeTable.ExecuteAsync(TableOperation.Delete(timesList[i + 1]));

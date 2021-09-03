@@ -26,6 +26,8 @@
   </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <Pkgxunit_analyzers Condition=" '$(Pkgxunit_analyzers)' == '' ">C:\Users\crist\.nuget\packages\xunit.analyzers\0.10.0</Pkgxunit_analyzers>
-    <PkgNewtonsoft_Json Condition=" '$(PkgNewtonsoft_Json)' == '' ">C:\Users\crist\.nuget\packages\newtonsoft.json\9.0.1</PkgNewtonsoft_Json>
+    <PkgMicrosoft_Azure_WebJobs_Script_ExtensionsMetadataGenerator Condition=" '$(PkgMicrosoft_Azure_WebJobs_Script_ExtensionsMetadataGenerator)' == '' ">C:\Users\crist\.nuget\packages\microsoft.azure.webjobs.script.extensionsmetadatagenerator\1.2.2</PkgMicrosoft_Azure_WebJobs_Script_ExtensionsMetadataGenerator>
+    <PkgMicrosoft_Azure_Functions_Analyzers Condition=" '$(PkgMicrosoft_Azure_Functions_Analyzers)' == '' ">C:\Users\crist\.nuget\packages\microsoft.azure.functions.analyzers\1.0.0</PkgMicrosoft_Azure_Functions_Analyzers>
+    <PkgMicrosoft_NET_Sdk_Functions Condition=" '$(PkgMicrosoft_NET_Sdk_Functions)' == '' ">C:\Users\crist\.nuget\packages\microsoft.net.sdk.functions\3.0.13</PkgMicrosoft_NET_Sdk_Functions>
   </PropertyGroup>
 </Project>

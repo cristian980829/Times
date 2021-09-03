@@ -21,15 +21,15 @@ namespace times.Functions.Functions
         [FunctionName(nameof(CreateTime))]
         public static async Task<IActionResult> CreateTime(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "time")] HttpRequest req,
-            [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable)
+            [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
+            ILogger log)
         {
+            log.LogInformation("Recieved a new time.");
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
             Time time = JsonConvert.DeserializeObject<Time>(requestBody);
 
-            if (time?.EmployeId == null ||
-                time?.Date == null ||
-                time?.Type == null)
+            if (time?.EmployeId == null || time?.Date == null || time?.Type == null)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -38,30 +38,14 @@ namespace times.Functions.Functions
                 });
             }
 
-            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, (int)time.EmployeId);
-            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
-            TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null);
-            
             string replyMessage = null;
 
-            if (existsId.Results.Count != 0)
-            {
-                List<TimeEntity> timesList = existsId.OrderBy(x => x.Date).ToList();
+            Task<string> validate_Entry = validateEntry(timeTable, (int)time.EmployeId, time);
 
-                if (timesList.Last().Type == time.Type)
-                {
-                    replyMessage = "This employee has alreay ";
-                    replyMessage += time.Type is 0 ? "entered" : "left";
-                }
-            }
-            else
+            if (validate_Entry.Result != null)
             {
-                if (time.Type == 1)
-                {
-                    replyMessage = $"this employee has not entered.";
-                }
+                replyMessage = validate_Entry.Result;
             }
-
             if (replyMessage != null)
             {
                 return new BadRequestObjectResult(new Response
@@ -79,24 +63,20 @@ namespace times.Functions.Functions
                 IsConsolidated = false,
                 ETag = "*",
                 PartitionKey = "TIME",
-                RowKey = Guid.NewGuid().ToString(),
+                RowKey = Guid.NewGuid().ToString()
             };
 
             TableOperation addOperation = TableOperation.Insert(timeEntity);
             await timeTable.ExecuteAsync(addOperation);
 
             string message = "New time stored in table";
+            log.LogInformation(message);
             return new OkObjectResult(new Response
             {
                 IsSuccess = true,
                 Message = message,
                 Result = timeEntity
             });
-        }
-
-        private static void List<T>()
-        {
-            throw new NotImplementedException();
         }
 
         [FunctionName(nameof(UpdateTime))]
@@ -203,7 +183,7 @@ namespace times.Functions.Functions
                 });
             }
 
-            string message = $"Todo: {timeEntity.RowKey}, received.";
+            string message = $"Time: {timeEntity.RowKey}, received.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
@@ -217,14 +197,14 @@ namespace times.Functions.Functions
         [FunctionName(nameof(DeleteTime))]
         public static async Task<IActionResult> DeleteTime(
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "time/{id}")] HttpRequest req,
-            [Table("time", "TIME", "{id}", Connection = "AzureWebJobsStorage")] TimeEntity timeEntity,
+            [Table("time", "TIME", "{id}", Connection = "AzureWebJobsStorage")] TimeEntity time,
             [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
             string id,
             ILogger log)
         {
             log.LogInformation($"Delete time: {id} received.");
 
-            if (timeEntity == null)
+            if (time == null)
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -233,16 +213,90 @@ namespace times.Functions.Functions
                 });
             }
 
-            await timeTable.ExecuteAsync(TableOperation.Delete(timeEntity));
-            string message = $"Time: {timeEntity.RowKey}, deleted.";
+            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, time.EmployeId);
+            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
+            TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null, null, null);
+            int size = existsId.Results.Count;
+            string deletedMessage = null;
+            if (size > 0)
+            {
+                deletedMessage = validateIfItCanBeDelete(existsId, size, time, timeTable).Result;
+            }
+
+            await timeTable.ExecuteAsync(TableOperation.Delete(time));
+            string message = null;
+            if (deletedMessage != null)
+            {
+                message = deletedMessage;
+            }
+            else
+            {
+                message = $"Time: {time.RowKey} deleted.";
+            }
+
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
             {
                 IsSuccess = true,
                 Message = message,
-                Result = timeEntity
+                Result = time
             });
+        }
+
+        private static async Task<string> validateEntry(CloudTable timeTable, int EmployeId, Time time)
+        {
+            string filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, EmployeId);
+            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
+            TableQuerySegment<TimeEntity> existsId = await timeTable.ExecuteQuerySegmentedAsync(query, null, null, null);
+
+            if (existsId.Results.Count > 0)
+            {
+                List<TimeEntity> timesList = existsId.OrderBy(x => x.Date).ToList();
+
+                if (timesList.Last().Type == time.Type)
+                {
+                    string type = time.Type is 0 ? "entered" : "left";
+                    return $"this employee has not {type}.";
+                }
+            }
+            else
+            {
+                if (time.Type == 1)
+                {
+                    return $"this employee has not entered.";
+                }
+            }
+            return null;
+        }
+
+        private static async Task<string> validateIfItCanBeDelete(TableQuerySegment<TimeEntity> existsId, int size, TimeEntity time, CloudTable timeTable)
+        {
+            string deleted = null;
+            List<TimeEntity> timesList = existsId.OrderBy(x => x.Date).ToList();
+            for (int i = 0; i < size; i++)
+            {
+                if (timesList[i].RowKey == time.RowKey)
+                {
+                    if (timesList[i].Type == 1)
+                    {
+                        if (timesList.Last().RowKey != timesList[i].RowKey)
+                        {
+                            await timeTable.ExecuteAsync(TableOperation.Delete(timesList[i - 1]));
+                            return $"Time: {time.RowKey} and {timesList[i - 1].RowKey} deleted.";
+                        }
+                    }
+                    else
+                    {
+                        if (timesList.Last().RowKey != timesList[i].RowKey)
+                        {
+                            await timeTable.ExecuteAsync(TableOperation.Delete(timesList[i + 1]));
+                            return $"Time: {time.RowKey} and {timesList[i + 1].RowKey} deleted";
+                        }
+                    }
+                }
+            }
+            return deleted;
         }
     }
 }

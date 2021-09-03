@@ -25,46 +25,49 @@ namespace times.Functions.Functions
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(filter);
             TableQuerySegment<TimeEntity> unconsolidatedTimes = await timeTable.ExecuteQuerySegmentedAsync(query, null);
 
-            List<TimeEntity> employee_times = unconsolidatedTimes.OrderBy(t => t.EmployeId).ThenBy(e => e.Date).ToList();
-
-            DateTime employeDate = new DateTime();
-            TimeSpan difference;
-            string entryRowKey = "";
-            double totalMinutes = 0;
-            int id = -1;
-            string RowKeyLastEmployee = employee_times.Last().RowKey;
-            foreach (TimeEntity em in employee_times)
+            if (unconsolidatedTimes.Results.Count != 0)
             {
-                if (id == -1)
-                {
-                    id = em.EmployeId;
-                }
+                List<TimeEntity> employee_times = unconsolidatedTimes.OrderBy(t => t.EmployeId).ThenBy(e => e.Date).ToList();
 
-                if (id != em.EmployeId && id != -1)
+                DateTime employeDate = new DateTime();
+                TimeSpan difference;
+                string entryRowKey = "";
+                double totalMinutes = 0;
+                int id = -1;
+                string RowKeyLastEmployee = employee_times.Last().RowKey;
+                foreach (TimeEntity em in employee_times)
                 {
-                    CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
-                    id = em.EmployeId;
-                    totalMinutes = 0;
-                }
+                    if (id == -1)
+                    {
+                        id = em.EmployeId;
+                    }
 
-                if (em.Type == 0)
-                {
-                    employeDate = em.Date;
-                    entryRowKey = em.RowKey;
-                }
-                else
-                {
-                    difference = em.Date - employeDate;
-                    totalMinutes += difference.TotalMinutes;
-
-                    UpdateIsConsolidatedState(entryRowKey, timeTable);
-                    UpdateIsConsolidatedState(em.RowKey, timeTable);
-
-                    employeDate = em.Date;
-                    entryRowKey = "";
-                    if (RowKeyLastEmployee == em.RowKey)
+                    if (id != em.EmployeId && id != -1)
                     {
                         CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                        id = em.EmployeId;
+                        totalMinutes = 0;
+                    }
+
+                    if (em.Type == 0)
+                    {
+                        employeDate = em.Date;
+                        entryRowKey = em.RowKey;
+                    }
+                    else
+                    {
+                        difference = em.Date - employeDate;
+                        totalMinutes += difference.TotalMinutes;
+
+                        UpdateIsConsolidatedState(entryRowKey, timeTable);
+                        UpdateIsConsolidatedState(em.RowKey, timeTable);
+
+                        employeDate = em.Date;
+                        entryRowKey = "";
+                        if (RowKeyLastEmployee == em.RowKey)
+                        {
+                            CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                        }
                     }
                 }
             }

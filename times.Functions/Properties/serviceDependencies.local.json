@@ -4,8 +4,10 @@
       "type": "appInsights.sdk"
     },
     "storage1": {
+      "resourceId": null,
       "type": "storage.emulator",
-      "connectionId": "AzureWebJobsStorage"
+      "connectionId": "AzureWebJobsStorage",
+      "secretStore": null
     }
   }
 }

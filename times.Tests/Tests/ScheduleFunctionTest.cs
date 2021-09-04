@@ -14,6 +14,7 @@ namespace times.Tests.Tests
         {
             //Arrenge --preparate unitary test --We need request, table and http
             MockCloudTableTime mockTimes = new MockCloudTableTime(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
+            MockCloudTableConsolidated mockConsolidated = new MockCloudTableConsolidated(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
             ListLogger logger = (ListLogger)TestFactory.CreateLogger(LoggerTypes.List);
 
             //Act --Execute unitary test

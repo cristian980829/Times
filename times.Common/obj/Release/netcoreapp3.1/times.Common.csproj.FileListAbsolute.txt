@@ -1,0 +1,10 @@
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\bin\Release\netcoreapp3.1\times.Common.deps.json
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\bin\Release\netcoreapp3.1\times.Common.dll
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\bin\Release\netcoreapp3.1\times.Common.pdb
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.csproj.AssemblyReference.cache
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.AssemblyInfoInputs.cache
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.AssemblyInfo.cs
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.csproj.CoreCompileInputs.cache
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.dll
+C:\Users\crist\Desktop\ITM 2021-2\PROGRAMACIÓN DISTRIBUIDA\Times\times.Common\obj\Release\netcoreapp3.1\times.Common.pdb

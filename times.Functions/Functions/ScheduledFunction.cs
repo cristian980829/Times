@@ -110,20 +110,20 @@ namespace times.Functions.Functions
         private static async void UpdateIfExistsConsolidated(string rowkey, CloudTable consolidatedTable, double minutesWorked)
         {
             //Update consolidation status to true
-            TableOperation findOperation = TableOperation.Retrieve<TimeEntity>("CONSOLIDATED", rowkey);
+            TableOperation findOperation = TableOperation.Retrieve<ConsolidatedEntity>("CONSOLIDATED", rowkey);
             TableResult findResult = await consolidatedTable.ExecuteAsync(findOperation);
 
             //Update
-            TimeEntity time_Entity = (TimeEntity)findResult.Result;
-            time_Entity.MinutesWorked += minutesWorked;
+            ConsolidatedEntity consolidated_Entity = (ConsolidatedEntity)findResult.Result;
+            consolidated_Entity.MinutesWorked += minutesWorked;
 
-            TableOperation add_Operation = TableOperation.Replace(time_Entity);
+            TableOperation add_Operation = TableOperation.Replace(consolidated_Entity);
             await consolidatedTable.ExecuteAsync(add_Operation);
         }
 
         private static async void CreateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable, DateTime employeDate)
         {
-            TimeEntity timeEntity = new TimeEntity
+            ConsolidatedEntity consolidatedEntity = new ConsolidatedEntity
             {
                 EmployeId = id,
                 Date = new DateTime(employeDate.Year, employeDate.Month, employeDate.Day, 00, 00, 0),
@@ -133,9 +133,9 @@ namespace times.Functions.Functions
                 RowKey = Guid.NewGuid().ToString(),
             };
 
-            if (timeEntity.Date.Year != 1)
+            if (consolidatedEntity.Date.Year != 1)
             {
-                TableOperation addOperation = TableOperation.Insert(timeEntity);
+                TableOperation addOperation = TableOperation.Insert(consolidatedEntity);
                 await consolidatedTable.ExecuteAsync(addOperation);
             }
         }
@@ -143,12 +143,12 @@ namespace times.Functions.Functions
         private static async void CreateOrUpdateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable, DateTime employeDate)
         {
             string consolidated_filter = TableQuery.GenerateFilterConditionForInt("EmployeId", QueryComparisons.Equal, id);
-            TableQuery<TimeEntity> consolidated_query = new TableQuery<TimeEntity>().Where(consolidated_filter);
-            TableQuerySegment<TimeEntity> existsConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidated_query, null);
+            TableQuery<ConsolidatedEntity> consolidated_query = new TableQuery<ConsolidatedEntity>().Where(consolidated_filter);
+            TableQuerySegment<ConsolidatedEntity> existsConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidated_query, null);
 
             if (existsConsolidated.Results.Count != 0)
             {
-                foreach (TimeEntity it in existsConsolidated)
+                foreach (ConsolidatedEntity it in existsConsolidated)
                 {
                     if (it.Date.ToString("dd-MM-yyyy").Equals(employeDate.Date.ToString("dd-MM-yyyy")))
                     {

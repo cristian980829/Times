@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using times.Functions.Entities;
 
 namespace times.Tests.Helpers
 {
@@ -22,13 +23,13 @@ namespace times.Tests.Helpers
         {
         }
 
-        public override async Task<TableQuerySegment<TimeEntity>> ExecuteQuerySegmentedAsync<TimeEntity>(TableQuery<TimeEntity> query, TableContinuationToken token)
+        public override async Task<TableQuerySegment<ConsolidatedEntity>> ExecuteQuerySegmentedAsync<ConsolidatedEntity>(TableQuery<ConsolidatedEntity> query, TableContinuationToken token)
         {
-            ConstructorInfo constructor = typeof(TableQuerySegment<TimeEntity>)
+            ConstructorInfo constructor = typeof(TableQuerySegment<ConsolidatedEntity>)
                    .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
                    .FirstOrDefault(c => c.GetParameters().Count() == 1);
 
-            return await Task.FromResult(constructor.Invoke(new object[] { TestFactory.GetConsolidatedList() }) as TableQuerySegment<TimeEntity>);
+            return await Task.FromResult(constructor.Invoke(new object[] { TestFactory.GetConsolidatedList() }) as TableQuerySegment<ConsolidatedEntity>);
         }
     }
 }

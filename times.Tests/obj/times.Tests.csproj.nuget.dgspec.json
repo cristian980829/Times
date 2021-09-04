@@ -110,6 +110,10 @@
         "netcoreapp3.1": {
           "targetAlias": "netcoreapp3.1",
           "dependencies": {
+            "Microsoft.ApplicationInsights.WorkerService": {
+              "target": "Package",
+              "version": "[2.15.0, )"
+            },
             "Microsoft.Azure.WebJobs.Extensions.Storage": {
               "target": "Package",
               "version": "[3.0.1, )"

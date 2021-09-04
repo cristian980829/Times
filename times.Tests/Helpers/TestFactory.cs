@@ -68,10 +68,10 @@ namespace times.Tests.Helpers
             return lista;
         }
 
-        public static List<TimeEntity> GetConsolidatedList()
+        public static List<ConsolidatedEntity> GetConsolidatedList()
         {
-            List<TimeEntity> lista = new List<TimeEntity>();
-            TimeEntity time = new TimeEntity
+            List<ConsolidatedEntity> lista = new List<ConsolidatedEntity>();
+            ConsolidatedEntity time = new ConsolidatedEntity
             {
                 ETag = "*",
                 PartitionKey = "CONSOLIDATED",

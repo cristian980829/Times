@@ -23,10 +23,10 @@ namespace times.Functions.Functions
             ILogger log)
         {
             log.LogInformation($"Get consolidated by date: {date} received.");
-            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>();
-            TableQuerySegment<TimeEntity> consolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(query, null);
+            TableQuery<ConsolidatedEntity> query = new TableQuery<ConsolidatedEntity>();
+            TableQuerySegment<ConsolidatedEntity> consolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(query, null);
 
-            List<TimeEntity> consolidatedList = null;
+            List<ConsolidatedEntity> consolidatedList = null;
 
             if (consolidated.Results.Count == 0)
             {

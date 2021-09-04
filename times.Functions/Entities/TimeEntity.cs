@@ -13,6 +13,5 @@ namespace times.Functions.Entities
 
         public bool? IsConsolidated { get; set; }
 
-        public double? MinutesWorked { get; set; }
     }
 }

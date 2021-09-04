@@ -256,14 +256,14 @@ namespace times.Functions.Functions
                 if (timesList.Last().Type == time.Type)
                 {
                     string type = time.Type is 0 ? "entered" : "left";
-                    return $"this employee has not {type}.";
+                    return $"This employee has already {type}.";
                 }
             }
             else
             {
                 if (time.Type == 1)
                 {
-                    return $"this employee has not entered.";
+                    return $"This employee has not entered.";
                 }
             }
             return null;
@@ -281,11 +281,8 @@ namespace times.Functions.Functions
                     if (timesList[i].Type == 1)
                     {
                         //But if it is the last record, only the current one will be removed.
-                        if (timesList.Last().RowKey != timesList[i].RowKey)
-                        {
                             await timeTable.ExecuteAsync(TableOperation.Delete(timesList[i - 1]));
                             return $"Time: {time.RowKey} and {timesList[i - 1].RowKey} deleted.";
-                        }
                     }
                     else
                     {

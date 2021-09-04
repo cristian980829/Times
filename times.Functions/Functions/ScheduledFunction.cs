@@ -36,15 +36,31 @@ namespace times.Functions.Functions
                 double totalMinutes = 0;
                 int id = -1;
                 string RowKeyLastEmployee = employee_times.Last().RowKey;
+                bool finish = false;
 
                 foreach (TimeEntity em in employee_times)
                 {
+                    //If the employee has times on different dates, separate consolidation is created
+                    if (!employeDate.ToString("dd-MM-yyyy").Equals(em.Date.ToString("dd-MM-yyyy")) && id == em.EmployeId)
+                    {
+                        CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                        totalMinutes = 0;
+                    }
+
                     if (id == -1)
                     {
                         id = em.EmployeId;
                     }
+
+                    //Ends the process with a time in state 0. This doesn't consolidate
+                    if (RowKeyLastEmployee == em.RowKey && em.Type == 0)
+                    {
+                        CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
+                        finish = true;
+                    }
+
                     //If it finishes going through all the data of an employee the consolidation is saved.
-                    if (id != em.EmployeId && id != -1)
+                    if (id != em.EmployeId && id != -1 && !finish)
                     {
                         //If the employee already has a consolidation, a new consolidation will be created
                         //if the current date is different from the date of the already registered consolidation.
@@ -54,13 +70,13 @@ namespace times.Functions.Functions
                         totalMinutes = 0;
                     }
 
-                    if (em.Type == 0)
+                    if (em.Type == 0 && !finish)
                     {
                         employeDate = em.Date;
                         entryRowKey = em.RowKey;
                     }
                     //Consolidation will only be created if the employee has checked out
-                    else
+                    else if(!finish)
                     {
                         difference = em.Date - employeDate;
                         totalMinutes += difference.TotalMinutes;
@@ -68,8 +84,6 @@ namespace times.Functions.Functions
                         UpdateIsConsolidatedState(entryRowKey, timeTable);
                         UpdateIsConsolidatedState(em.RowKey, timeTable);
 
-                        employeDate = em.Date;
-                        entryRowKey = "";
                         if (RowKeyLastEmployee == em.RowKey)
                         {
                             CreateOrUpdateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
@@ -107,20 +121,23 @@ namespace times.Functions.Functions
             await consolidatedTable.ExecuteAsync(add_Operation);
         }
 
-        private static async void CreateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable)
+        private static async void CreateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable, DateTime employeDate)
         {
             TimeEntity timeEntity = new TimeEntity
             {
                 EmployeId = id,
-                Date = DateTime.UtcNow,
+                Date = new DateTime(employeDate.Year, employeDate.Month, employeDate.Day, 00, 00, 0),
                 MinutesWorked = totalMinutes,
                 ETag = "*",
                 PartitionKey = "CONSOLIDATED",
                 RowKey = Guid.NewGuid().ToString(),
             };
 
-            TableOperation addOperation = TableOperation.Insert(timeEntity);
-            await consolidatedTable.ExecuteAsync(addOperation);
+            if (timeEntity.Date.Year != 1)
+            {
+                TableOperation addOperation = TableOperation.Insert(timeEntity);
+                await consolidatedTable.ExecuteAsync(addOperation);
+            }
         }
 
         private static async void CreateOrUpdateConsolidation(int id, double totalMinutes, CloudTable consolidatedTable, DateTime employeDate)
@@ -139,13 +156,13 @@ namespace times.Functions.Functions
                     }
                     else
                     {
-                        CreateConsolidation(id, totalMinutes, consolidatedTable);
+                        CreateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
                     }
                 }
             }
             else
             {
-                CreateConsolidation(id, totalMinutes, consolidatedTable);
+                CreateConsolidation(id, totalMinutes, consolidatedTable, employeDate);
             }
         }
 

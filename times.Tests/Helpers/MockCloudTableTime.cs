@@ -48,7 +48,5 @@ namespace times.Tests.Helpers
 
             return await Task.FromResult(constructor.Invoke(new object[] { TestFactory.GetTimeEntityList() }) as TableQuerySegment<TimeEntity>);
         }
-
-
     }
 }
